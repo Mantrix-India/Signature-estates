@@ -34,3 +34,10 @@ ai-service/venv/
 .DS_Store
 Thumbs.db
 .vscode/
+# Build output
+dist/
+backend/dist/
+*.tsbuildinfo
+
+# Archives (never commit zips)
+*.zip

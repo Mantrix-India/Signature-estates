@@ -6,6 +6,9 @@ const router = Router();
 
 router.use(authMiddleware);
 
+// Shared snapshot used by BOTH the dashboard and the analytics page.
+router.get('/snapshot', analyticsController.snapshot);
+
 router.get('/overview', analyticsController.overview);
 router.get('/inventory', analyticsController.inventory);
 router.get('/lead-funnel', analyticsController.leadFunnel);

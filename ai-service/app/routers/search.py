@@ -34,6 +34,8 @@ def _extract_filters(query: str) -> tuple[SearchFilters, bool]:
         property_type = raw.get("property_type")
         if property_type not in VALID_PROPERTY_TYPES:
             property_type = None
+        if not isinstance(raw, dict):
+            raise ValueError("model did not return a JSON object")
         filters = SearchFilters(
             bedrooms=raw.get("bedrooms"),
             min_price=raw.get("min_price"),

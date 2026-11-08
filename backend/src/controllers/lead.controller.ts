@@ -122,7 +122,7 @@ export async function addTask(req: AuthRequest, res: Response, next: NextFunctio
 export async function updateTask(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const input = updateTaskSchema.parse(req.body);
-    const task = await leadService.updateTask(getParam(req, 'taskId'), input);
+    const task = await leadService.updateTask(getParam(req, 'taskId'), input, getParam(req, 'id'));
     res.status(200).json({ success: true, data: task });
   } catch (err) {
     next(err);
@@ -131,7 +131,7 @@ export async function updateTask(req: AuthRequest, res: Response, next: NextFunc
 
 export async function deleteTask(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    await leadService.deleteTask(getParam(req, 'taskId'));
+    await leadService.deleteTask(getParam(req, 'taskId'), getParam(req, 'id'));
     res.status(200).json({ success: true, message: 'Task deleted' });
   } catch (err) {
     next(err);

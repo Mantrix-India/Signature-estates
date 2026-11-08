@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma';
 import { AppError } from '../utils/AppError';
+import { dayBounds } from '../utils/time';
 import {
   ListFollowUpsQuery,
   CreateFollowUpInput,
@@ -20,15 +21,9 @@ const followUpInclude = {
   },
 };
 
-// Day boundaries use the SERVER's local time (single-region CRM). Overdue means the
-// due date is before today's local midnight; Today is within the current local day.
-function dayBounds(now = new Date()) {
-  const startToday = new Date(now);
-  startToday.setHours(0, 0, 0, 0);
-  const startTomorrow = new Date(startToday);
-  startTomorrow.setDate(startTomorrow.getDate() + 1);
-  return { startToday, startTomorrow };
-}
+// Day boundaries use the BUSINESS timezone (APP_TIMEZONE, default Asia/Kolkata),
+// not the server clock — the API runs on UTC hosts, which used to push IST
+// morning follow-ups into "Overdue". Overdue = before today's local midnight.
 
 export async function listFollowUps(query: ListFollowUpsQuery, currentUserId: string) {
   const { scope, assignedToId, includeNoDueDate } = query;

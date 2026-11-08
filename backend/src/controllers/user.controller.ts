@@ -53,6 +53,8 @@ export async function updateRole(req: AuthRequest, res: Response, next: NextFunc
       data: { role: input.role },
       select: { id: true, fullName: true, email: true, role: true },
     });
+    // Force re-login so the new role is in the user's next token.
+    await prisma.refreshToken.deleteMany({ where: { userId: targetId } });
     res.status(200).json({ success: true, data: user });
   } catch (err) {
     next(err);
@@ -71,6 +73,8 @@ export async function deactivate(req: AuthRequest, res: Response, next: NextFunc
       where: { id: targetId },
       data: { isActive: false },
     });
+    // Kill every session of the deactivated user.
+    await prisma.refreshToken.deleteMany({ where: { userId: targetId } });
     res.status(200).json({ success: true, message: 'User deactivated' });
   } catch (err) {
     next(err);

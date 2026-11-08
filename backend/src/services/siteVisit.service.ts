@@ -1,6 +1,7 @@
 import { prisma } from '../config/prisma';
 import { AppError } from '../utils/AppError';
 import { createNotification } from './notification.service';
+import { formatDateTime } from '../utils/time';
 import {
   CreateSiteVisitInput,
   UpdateSiteVisitInput,
@@ -51,11 +52,11 @@ export async function createSiteVisit(input: CreateSiteVisitInput, userId: strin
     await createNotification(
       siteVisit.assignedToId,
       'New site visit assigned',
-      `You have a site visit for "${property?.title}" scheduled on ${new Date(
-        siteVisit.scheduledAt
-              ).toLocaleString('en-IN')}.`,
-        { link: `/dashboard/site-visits/${siteVisit.id}`, type: 'SITE_VISIT' }
-      );
+      `You have a site visit for "${property?.title}" scheduled on ${formatDateTime(
+        new Date(siteVisit.scheduledAt)
+      )}.`,
+      { link: `/dashboard/site-visits/${siteVisit.id}`, type: 'SITE_VISIT' }
+    );
   }
 
   return siteVisit;
@@ -123,9 +124,9 @@ export async function updateSiteVisit(id: string, input: UpdateSiteVisitInput, u
       await createNotification(
         notifyUserId,
         'Site visit status updated',
-                  `Status changed from ${existing.status} to ${input.status} for "${updated.property.title}".`,
-          { link: `/dashboard/site-visits/${updated.id}`, type: 'SITE_VISIT' }
-        );
+        `Status changed from ${existing.status} to ${input.status} for "${updated.property.title}".`,
+        { link: `/dashboard/site-visits/${updated.id}`, type: 'SITE_VISIT' }
+      );
     }
   }
 

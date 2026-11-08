@@ -17,7 +17,7 @@ export async function getRevenueSummary(q: RevenueQuery) {
   const created = dealDateRange(q);
   const dealWhere = created ? { createdAt: created } : {};
 
-  const [byStage, completedAgg, commissionAgg, paymentAgg] = await Promise.all([
+  const [byStage, completedAgg, commissionAgg, paymentAgg, pendingAgg] = await Promise.all([
     prisma.deal.groupBy({
       by: ['stage'],
       where: dealWhere,
@@ -29,13 +29,24 @@ export async function getRevenueSummary(q: RevenueQuery) {
       _sum: { dealValue: true },
       _count: { _all: true },
     }),
+    // Commission and payments follow the same date window as deals, and money on
+    // CANCELLED deals no longer inflates the commission / pending figures.
     prisma.commission.aggregate({
+      where: { status: { not: 'CANCELLED' }, deal: { ...dealWhere, stage: { not: 'CANCELLED' } } },
       _sum: { grossAmount: true, agentAmount: true, companyAmount: true },
     }),
     prisma.payment.groupBy({
       by: ['status'],
+      where: { deal: dealWhere },
       _sum: { amount: true },
       _count: { _all: true },
+    }),
+    prisma.payment.aggregate({
+      where: {
+        status: { in: ['PENDING', 'OVERDUE'] },
+        deal: { ...dealWhere, stage: { not: 'CANCELLED' } },
+      },
+      _sum: { amount: true },
     }),
   ]);
 
@@ -43,8 +54,7 @@ export async function getRevenueSummary(q: RevenueQuery) {
   for (const p of paymentAgg) {
     paymentsByStatus[p.status] = { count: p._count._all, amount: p._sum.amount || 0 };
   }
-  const pendingTotal =
-    (paymentsByStatus['PENDING']?.amount || 0) + (paymentsByStatus['OVERDUE']?.amount || 0);
+  const pendingTotal = pendingAgg._sum.amount || 0;
 
   return {
     dealsByStage: byStage.map((s: (typeof byStage)[number]) => ({
@@ -98,7 +108,7 @@ export async function getCommissionBreakdown() {
 export async function getPendingPayments() {
   const now = new Date();
   const payments = await prisma.payment.findMany({
-    where: { status: { in: ['PENDING', 'OVERDUE'] } },
+    where: { status: { in: ['PENDING', 'OVERDUE'] }, deal: { stage: { not: 'CANCELLED' } } },
     orderBy: [{ dueDate: 'asc' }],
     include: {
       deal: {

@@ -4,7 +4,7 @@ import { CreateInvoiceInput, UpdateInvoiceInput } from '../validators/invoice.va
 
 function generateInvoiceNumber() {
   const year = new Date().getFullYear();
-  const random = Math.floor(1000 + Math.random() * 9000);
+  const random = Math.floor(10000 + Math.random() * 90000);
   return `INV-${year}-${random}`;
 }
 
@@ -22,15 +22,25 @@ export async function createInvoice(input: CreateInvoiceInput, userId: string) {
     if (!property) throw new AppError('Property not found', 404);
   }
 
-  return prisma.invoice.create({
-    data: {
-      ...input,
-      dueDate: new Date(input.dueDate),
-      invoiceNumber: generateInvoiceNumber(),
-      createdById: userId,
-    },
-    include: invoiceInclude,
-  });
+  // Invoice numbers are random (INV-YYYY-NNNN); retry on the rare unique clash
+  // instead of failing the request with a 500.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      return await prisma.invoice.create({
+        data: {
+          ...input,
+          dueDate: new Date(input.dueDate),
+          invoiceNumber: generateInvoiceNumber(),
+          createdById: userId,
+        },
+        include: invoiceInclude,
+      });
+    } catch (err) {
+      const code = (err as { code?: string })?.code;
+      if (code !== 'P2002' || attempt === 4) throw err;
+    }
+  }
+  throw new AppError('Could not generate a unique invoice number, please retry', 500);
 }
 
 export async function listInvoices() {

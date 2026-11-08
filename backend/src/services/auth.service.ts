@@ -120,19 +120,28 @@ async function issueTokens(userId: string, role: string) {
 }
 
 export async function registerUser(input: RegisterInput) {
-  const existing = await prisma.user.findUnique({ where: { email: input.email } });
+  const existing = await prisma.user.findFirst({
+    where: { email: { equals: input.email, mode: 'insensitive' } },
+  });
   if (existing) {
     throw new AppError('An account with this email already exists', 409);
   }
 
   const hashedPassword = await bcrypt.hash(input.password, 10);
 
+  // SECURITY: public sign-up must never choose its own role — previously anyone
+  // could POST { role: 'ADMIN' } and take over the CRM. The very first account
+  // bootstraps as ADMIN; everyone after starts as AGENT and an admin promotes
+  // them from Settings (PATCH /users/:id/role).
+  const userCount = await prisma.user.count();
+  const role = userCount === 0 ? 'ADMIN' : 'AGENT';
+
   const user = await prisma.user.create({
     data: {
       fullName: input.fullName,
       email: input.email,
       password: hashedPassword,
-      role: input.role ?? 'AGENT',
+      role,
     },
   });
 
@@ -140,7 +149,10 @@ export async function registerUser(input: RegisterInput) {
 }
 
 export async function loginUser(input: LoginInput) {
-  const user = await prisma.user.findUnique({ where: { email: input.email } });
+  // Case-insensitive so "Name@Mail.com" and "name@mail.com" are the same login.
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: input.email, mode: 'insensitive' } },
+  });
   if (!user || !user.isActive) {
     throw new AppError('Invalid email or password', 401);
   }
@@ -168,7 +180,17 @@ export async function refreshTokens(refreshToken: string) {
 
   await prisma.refreshToken.delete({ where: { id: stored.id } });
 
-  return issueTokens(payload.userId, payload.role);
+  // Re-read the user: a deactivated account must not keep refreshing, and a
+  // role change must take effect (the old token carries the old role).
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: { id: true, role: true, isActive: true },
+  });
+  if (!user || !user.isActive) {
+    throw new AppError('Account is disabled, please contact an admin', 401);
+  }
+
+  return issueTokens(user.id, user.role);
 }
 
 export async function logoutUser(refreshToken: string) {
@@ -192,7 +214,8 @@ export async function changePassword(userId: string, input: ChangePasswordInput)
 
   const isCurrentValid = await bcrypt.compare(input.currentPassword, user.password);
   if (!isCurrentValid) {
-    throw new AppError('Current password is incorrect', 401);
+    // 400, not 401: the session is valid, only the typed password is wrong.
+    throw new AppError('Current password is incorrect', 400);
   }
 
   const hashedPassword = await bcrypt.hash(input.newPassword, 10);

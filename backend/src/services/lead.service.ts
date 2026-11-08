@@ -109,7 +109,7 @@ export async function createLead(input: CreateLeadInput, userId: string) {
 }
 
 export async function listLeads(query: ListLeadsQuery) {
-  const { page, limit, stage, assignedToId } = query;
+  const { page, limit, stage, assignedToId, sort } = query;
 
   const where = {
     ...(stage && { stage }),
@@ -121,7 +121,7 @@ export async function listLeads(query: ListLeadsQuery) {
       where,
       skip: (page - 1) * limit,
       take: limit,
-      orderBy: { updatedAt: 'desc' },
+      orderBy: sort === 'created' ? { createdAt: 'desc' } : { updatedAt: 'desc' },
       include: leadInclude,
     }),
     prisma.lead.count({ where }),
@@ -256,9 +256,12 @@ export async function addTask(leadId: string, input: CreateTaskInput, userId: st
   });
 }
 
-export async function updateTask(id: string, input: UpdateTaskInput) {
+export async function updateTask(id: string, input: UpdateTaskInput, leadId?: string) {
   const existing = await prisma.task.findUnique({ where: { id } });
-  if (!existing) throw new AppError('Task not found', 404);
+  // Scope to the lead in the URL so /leads/A/tasks/<task of B> can't touch B's task.
+  if (!existing || (leadId && existing.leadId !== leadId)) {
+    throw new AppError('Task not found', 404);
+  }
 
   return prisma.task.update({
     where: { id },
@@ -270,8 +273,10 @@ export async function updateTask(id: string, input: UpdateTaskInput) {
   });
 }
 
-export async function deleteTask(id: string) {
+export async function deleteTask(id: string, leadId?: string) {
   const existing = await prisma.task.findUnique({ where: { id } });
-  if (!existing) throw new AppError('Task not found', 404);
+  if (!existing || (leadId && existing.leadId !== leadId)) {
+    throw new AppError('Task not found', 404);
+  }
   await prisma.task.delete({ where: { id } });
 }

@@ -83,6 +83,45 @@ def _upsert_summary(property_id: str, data: dict) -> None:
         )
 
 
+def _as_str_list(value) -> list[str]:
+    if isinstance(value, str):
+        value = [value]
+    if not isinstance(value, list):
+        return []
+    return [str(v).strip() for v in value if str(v).strip()]
+
+
+def _normalise_summary(raw: dict) -> dict:
+    """
+    The model occasionally returns a missing key, a string instead of a list,
+    or a score like "7/10". Validate BEFORE caching so a malformed reply is
+    treated as a failure (falls back to the cached copy) instead of crashing
+    with a KeyError or poisoning the cache.
+    """
+    if not isinstance(raw, dict):
+        raise ValueError("model did not return a JSON object")
+    summary = str(raw.get("summary") or "").strip()
+    if not summary:
+        raise ValueError("model response missing 'summary'")
+
+    score = raw.get("investment_score")
+    try:
+        score = int(float(str(score).split("/")[0])) if score is not None else None
+    except (TypeError, ValueError):
+        score = None
+    if score is not None:
+        score = max(1, min(10, score))
+
+    note = raw.get("investment_note")
+    return {
+        "summary": summary,
+        "pros": _as_str_list(raw.get("pros")),
+        "cons": _as_str_list(raw.get("cons")),
+        "investment_score": score,
+        "investment_note": str(note).strip() if note else None,
+    }
+
+
 @router.post("/summary/{property_id}", response_model=SummaryResponse)
 def ai_summary(property_id: str):
     prop = _fetch_property(property_id)
@@ -103,7 +142,7 @@ def ai_summary(property_id: str):
 
     prop_json = json.dumps(prop, default=str)
     try:
-        data = ask_json(SUMMARY_SYSTEM_PROMPT, prop_json)
+        data = _normalise_summary(ask_json(SUMMARY_SYSTEM_PROMPT, prop_json))
     except (GroqError, Exception) as e:
         if cached:
             # Groq is down but we have a stale cached summary — better than nothing.

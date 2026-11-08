@@ -40,6 +40,8 @@ export const listLeadsQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(20),
   stage: leadStageEnum.optional(),
   assignedToId: z.string().uuid().optional(),
+  // 'created' = newest leads first (dashboard feed); default = recently updated.
+  sort: z.enum(['updated', 'created']).default('updated'),
 });
 
 export const createActivitySchema = z.object({

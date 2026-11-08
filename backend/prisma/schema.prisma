@@ -197,6 +197,11 @@ enum PaymentMethod {
   OTHER
 }
 
+enum ListingType {
+  SALE
+  RENT
+}
+
 enum CommissionStatus {
   PENDING
   RECEIVED
@@ -304,6 +309,21 @@ model Property {
   offers     Offer[]
   deals      Deal[]
 
+  // ── Public website (V2.3) ──────────────────────────────────────────────
+  // Nothing is public until isPublished = true. slug is stable once created
+  // (title edits do NOT change it) so shared links and SEO never break.
+  isPublished Boolean                @default(false)
+  slug        String                 @unique
+  locality    String?
+  listingType ListingType            @default(SALE)
+  furnishing  RequirementFurnishing?
+  floor       Int?
+  totalFloors Int?
+  reraId      String?
+  isFeatured  Boolean                @default(false)
+  images      String[]               @default([])
+
+  @@index([isPublished, status])
   @@map("properties")
 }
 

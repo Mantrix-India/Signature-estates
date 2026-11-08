@@ -2,6 +2,7 @@
 import { prisma } from '../config/prisma';
 import { AppError } from '../utils/AppError';
 import { isValidDealTransition, STAGE_DATE_FIELD, DealStageValue } from '../utils/deal';
+import { syncClientStatusFromLeads } from './lead.service';
 import {
   CreateDealInput,
   UpdateDealInput,
@@ -22,6 +23,46 @@ const dealInclude = {
   payments: { orderBy: { dueDate: 'asc' as const } },
   _count: { select: { documents: true, payments: true, offers: true } },
 };
+
+// Lead stages that come before a booking. Creating a deal moves such a lead to
+// BOOKING; completing the deal moves it to CLOSED. This keeps the lead pipeline,
+// the conversion rate and the deal pipeline telling the same story.
+const PRE_BOOKING_STAGES = [
+  'NEW',
+  'CONTACTED',
+  'QUALIFIED',
+  'PROPERTIES_SHARED',
+  'INTERESTED',
+  'SITE_VISIT',
+  'NEGOTIATION',
+] as const;
+
+async function moveLeadStage(
+  leadId: string,
+  to: 'BOOKING' | 'CLOSED',
+  onlyFrom: readonly string[] | null,
+  actorUserId: string
+) {
+  const lead = await prisma.lead.findUnique({
+    where: { id: leadId },
+    select: { id: true, stage: true, clientId: true },
+  });
+  if (!lead || lead.stage === to || lead.stage === 'WON') return;
+  if (onlyFrom && !onlyFrom.includes(lead.stage)) return;
+
+  await prisma.$transaction([
+    prisma.lead.update({ where: { id: leadId }, data: { stage: to } }),
+    prisma.leadActivity.create({
+      data: {
+        leadId,
+        activityType: 'OTHER',
+        description: `Stage changed from ${lead.stage} to ${to} (synced from deal)`,
+        createdById: actorUserId,
+      },
+    }),
+  ]);
+  await syncClientStatusFromLeads(lead.clientId, actorUserId);
+}
 
 export function isPrivileged(role: string) {
   return role === 'ADMIN' || role === 'MANAGER';
@@ -103,30 +144,36 @@ export async function createDeal(input: CreateDealInput, actor: Actor) {
     throw new AppError('Provide dealValue, or an offerId to derive it from', 400);
   }
 
-  const deal = await prisma.deal.create({
-    data: {
-      leadId: input.leadId,
-      clientId: lead.clientId,
-      propertyId,
-      ownerId: input.ownerId,
-      agentId,
-      dealValue,
-      bookingDate: input.bookingDate ? new Date(input.bookingDate) : undefined,
-      notes: input.notes,
-      createdById: actor.userId,
-    },
-    include: dealInclude,
+  // Deal + offer acceptance are one atomic write: no half-created deals.
+  const deal = await prisma.$transaction(async (tx) => {
+    const created = await tx.deal.create({
+      data: {
+        leadId: input.leadId,
+        clientId: lead.clientId,
+        propertyId,
+        ownerId: input.ownerId,
+        agentId,
+        dealValue: dealValue!,
+        bookingDate: input.bookingDate ? new Date(input.bookingDate) : undefined,
+        notes: input.notes,
+        createdById: actor.userId,
+      },
+    });
+
+    // If created from an offer, mark it accepted and link it to the new deal.
+    if (offer) {
+      await tx.offer.update({
+        where: { id: offer.id },
+        data: { status: 'ACCEPTED', dealId: created.id },
+      });
+    }
+    return created;
   });
 
-  // If created from an offer, mark it accepted and link it to the new deal.
-  if (offer) {
-    await prisma.offer.update({
-      where: { id: offer.id },
-      data: { status: 'ACCEPTED', dealId: deal.id },
-    });
-  }
+  // A deal is a booking: advance an earlier-stage lead so the pipeline matches.
+  await moveLeadStage(input.leadId, 'BOOKING', PRE_BOOKING_STAGES, actor.userId);
 
-  return deal;
+  return prisma.deal.findUniqueOrThrow({ where: { id: deal.id }, include: dealInclude });
 }
 
 export async function listDeals(query: ListDealsQuery, actor: Actor) {
@@ -226,13 +273,20 @@ export async function transitionDeal(id: string, input: TransitionDealInput, act
   const stamp = input.date ? new Date(input.date) : new Date();
   const dateField = STAGE_DATE_FIELD[to];
 
-  // Dynamic date column keyed by target stage; typed as any because the column
-  // name is resolved at runtime from STAGE_DATE_FIELD.
-  const data: any = { stage: to };
+  // Dynamic date column keyed by target stage (resolved at runtime from STAGE_DATE_FIELD).
+  const data: Record<string, unknown> = { stage: to };
   if (dateField) data[dateField] = stamp;
   if (to === 'CANCELLED') data.cancelReason = input.cancelReason;
 
-  return prisma.deal.update({ where: { id }, data, include: dealInclude });
+  const updated = await prisma.deal.update({ where: { id }, data, include: dealInclude });
+
+  // Completed deal == closed (won) lead, so conversion rate reflects real sales.
+  if (to === 'COMPLETED') {
+    await moveLeadStage(deal.leadId, 'CLOSED', null, actor.userId);
+    return prisma.deal.findUniqueOrThrow({ where: { id }, include: dealInclude });
+  }
+
+  return updated;
 }
 
 export async function deleteDeal(id: string, actor: Actor) {

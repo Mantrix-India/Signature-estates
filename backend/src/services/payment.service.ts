@@ -20,6 +20,9 @@ export async function createPayment(input: CreatePaymentInput, actor: Actor) {
       method: input.method,
       reference: input.reference,
       note: input.note,
+      // A payment recorded as already PAID must carry a paid date, otherwise it
+      // never shows up in monthly revenue.
+      paidAt: input.status === 'PAID' ? new Date() : undefined,
       createdById: actor.userId,
     },
   });
@@ -38,10 +41,15 @@ export async function updatePayment(id: string, input: UpdatePaymentInput, actor
   if (!payment) throw new AppError('Payment not found', 404);
   await assertDealAccessById(payment.dealId, actor);
 
-  // Stamp paidAt automatically when moving to PAID without an explicit timestamp.
-  let paidAt = input.paidAt ? new Date(input.paidAt) : undefined;
+  // Stamp paidAt automatically when moving to PAID without an explicit timestamp,
+  // and clear it when a payment is moved back out of PAID (undo / correction) so
+  // revenue-by-month never counts money that wasn't actually received.
+  let paidAt: Date | null | undefined = input.paidAt ? new Date(input.paidAt) : undefined;
   if (input.status === 'PAID' && !input.paidAt && !payment.paidAt) {
     paidAt = new Date();
+  }
+  if (input.status && input.status !== 'PAID' && !input.paidAt) {
+    paidAt = null;
   }
 
   return prisma.payment.update({
