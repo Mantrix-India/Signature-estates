@@ -5,9 +5,12 @@ import toast from 'react-hot-toast';
 import { PropertyForm } from '@/components/properties/property-form';
 import { createPropertyRequest } from '@/lib/api/property-api';
 import { PropertyFormValues } from '@/types/property';
+import { useAuth } from '@/context/auth-context';
+import { canPublishRole } from '@/lib/website';
 
 export default function NewPropertyPage() {
   const router = useRouter();
+  const { user } = useAuth();
 
   async function handleSubmit(values: PropertyFormValues) {
     try {
@@ -29,7 +32,11 @@ export default function NewPropertyPage() {
       </div>
 
       <div className="rounded-xl border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-900">
-        <PropertyForm onSubmit={handleSubmit} submitLabel="Create Property" />
+        <PropertyForm
+          onSubmit={handleSubmit}
+          submitLabel="Create Property"
+          canPublish={canPublishRole(user?.role)}
+        />
       </div>
     </div>
   );

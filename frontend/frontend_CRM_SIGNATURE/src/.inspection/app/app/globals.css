@@ -1,0 +1,156 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  Real Estate OS — unified design system.
+
+  The application is styled entirely with raw Tailwind `neutral-*` + `white`
+  utilities plus semantic status colors. Rather than rewriting every file, we
+  retune the neutral scale here into a premium, layered, slightly-cool charcoal
+  palette and introduce a restrained `brand` accent. Every surface in the app
+  inherits this instantly and cohesively.
+*/
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  /* Neutral scale — retuned toward a refined, faintly cool graphite.
+     Light-mode surfaces live in 50–300, text in 500–900.
+     Dark-mode surfaces live in 800–950, text in 300–white. */
+  --color-white: oklch(0.995 0.001 260);
+  --color-neutral-50: oklch(0.978 0.0025 260);
+  --color-neutral-100: oklch(0.957 0.004 260);
+  --color-neutral-200: oklch(0.918 0.005 260);
+  --color-neutral-300: oklch(0.862 0.006 260);
+  --color-neutral-400: oklch(0.706 0.009 262);
+  --color-neutral-500: oklch(0.557 0.011 262);
+  --color-neutral-600: oklch(0.452 0.013 264);
+  --color-neutral-700: oklch(0.366 0.014 264);
+  --color-neutral-800: oklch(0.278 0.014 264);
+  --color-neutral-900: oklch(0.205 0.014 265);
+  --color-neutral-950: oklch(0.152 0.014 265);
+
+  /* Brand accent — a calm, trustworthy indigo-blue. Used sparingly:
+     active navigation, primary emphasis, focus rings, key figures. */
+  --color-brand-50: oklch(0.97 0.014 262);
+  --color-brand-100: oklch(0.94 0.03 262);
+  --color-brand-200: oklch(0.89 0.06 262);
+  --color-brand-300: oklch(0.81 0.1 262);
+  --color-brand-400: oklch(0.72 0.14 262);
+  --color-brand-500: oklch(0.645 0.17 262);
+  --color-brand-600: oklch(0.575 0.19 264);
+  --color-brand-700: oklch(0.505 0.175 264);
+  --color-brand-800: oklch(0.435 0.14 265);
+  --color-brand-900: oklch(0.37 0.1 265);
+
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.125rem;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-neutral-200);
+  }
+  .dark * {
+    border-color: var(--color-neutral-800);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    letter-spacing: -0.006em;
+  }
+
+  /* Tabular figures for dense CRM data */
+  h1, h2, h3, .tabular {
+    font-feature-settings: 'tnum', 'cv02', 'cv03', 'cv04';
+  }
+
+  ::selection {
+    background: color-mix(in oklch, var(--color-brand-500) 28%, transparent);
+  }
+
+  /* Refined focus ring across all interactive elements */
+  :focus-visible {
+    outline: 2px solid color-mix(in oklch, var(--color-brand-500) 70%, transparent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+/* Premium, unobtrusive scrollbars */
+@layer utilities {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-neutral-300) transparent;
+  }
+  .dark * {
+    scrollbar-color: var(--color-neutral-700) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: var(--color-neutral-300);
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  .dark *::-webkit-scrollbar-thumb {
+    background: var(--color-neutral-700);
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--color-neutral-400);
+    background-clip: content-box;
+  }
+  .dark *::-webkit-scrollbar-thumb:hover {
+    background: var(--color-neutral-600);
+    background-clip: content-box;
+  }
+
+  /* Subtle staggered entrance used by page shells */
+  @keyframes reos-fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .animate-fade-up {
+    animation: reos-fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+/* Leaflet map polish so it feels native to the product */
+.leaflet-container {
+  background: var(--color-neutral-100) !important;
+  font-family: var(--font-sans) !important;
+}
+.dark .leaflet-container {
+  background: var(--color-neutral-900) !important;
+}
+.dark .leaflet-tile {
+  filter: brightness(0.9) invert(1) contrast(0.9) hue-rotate(200deg) saturate(0.6);
+}
+.leaflet-bar,
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  border-radius: 0.625rem !important;
+  box-shadow: 0 4px 20px -8px rgb(0 0 0 / 0.25) !important;
+}

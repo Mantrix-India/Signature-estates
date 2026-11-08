@@ -1,8 +1,9 @@
 import Link from 'next/link';
-import { Bed, Bath, Ruler, MapPin, MoreVertical } from 'lucide-react';
+import { Bed, Bath, Ruler, MapPin, MoreVertical, Globe, EyeOff } from 'lucide-react';
 import { useState } from 'react';
 import { Property } from '@/types/property';
 import { cn } from '@/lib/utils';
+import { websitePropertyUrl } from '@/lib/website';
 
 const statusStyles: Record<string, string> = {
   AVAILABLE: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400',
@@ -20,10 +21,23 @@ function formatPrice(price: number) {
 export function PropertyCard({
   property,
   onDelete,
+  onTogglePublish,
 }: {
   property: Property;
   onDelete: (id: string) => void;
+  /** Passed only for ADMIN / MANAGER. */
+  onTogglePublish?: (property: Property) => void;
 }) {
+  const liveUrl = property.isPublished ? websitePropertyUrl(property.slug) : undefined;
+  const badgeClass = property.isPublished
+    ? 'flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
+    : 'flex items-center gap-1 rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400';
+  const badge = (
+    <>
+      {property.isPublished ? <Globe size={12} /> : <EyeOff size={12} />}
+      {property.isPublished ? 'On website' : 'Not published'}
+    </>
+  );
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -38,6 +52,14 @@ export function PropertyCard({
           {property.status}
         </span>
 
+        {liveUrl ? (
+          <a href={liveUrl} target="_blank" rel="noreferrer" className={cn(badgeClass, 'mr-auto ml-2 hover:underline')} title="Open on website">
+            {badge}
+          </a>
+        ) : (
+          <span className={cn(badgeClass, 'mr-auto ml-2')}>{badge}</span>
+        )}
+
         <div className="relative">
           <button
             onClick={() => setMenuOpen((v) => !v)}
@@ -48,13 +70,24 @@ export function PropertyCard({
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 top-9 z-10 w-32 rounded-lg border border-neutral-200 bg-white py-1 shadow-lg dark:border-neutral-800 dark:bg-neutral-900">
+            <div className="absolute right-0 top-9 z-10 w-36 rounded-lg border border-neutral-200 bg-white py-1 shadow-lg dark:border-neutral-800 dark:bg-neutral-900">
               <Link
                 href={`/dashboard/properties/${property.id}/edit`}
                 className="block px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800"
               >
                 Edit
               </Link>
+              {onTogglePublish && (
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onTogglePublish(property);
+                  }}
+                  className="block w-full px-3 py-1.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                >
+                  {property.isPublished ? 'Unpublish' : 'Publish'}
+                </button>
+              )}
               <button
                 onClick={() => {
                   setMenuOpen(false);

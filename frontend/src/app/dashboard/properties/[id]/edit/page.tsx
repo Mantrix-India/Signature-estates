@@ -6,9 +6,12 @@ import toast from 'react-hot-toast';
 import { PropertyForm } from '@/components/properties/property-form';
 import { getPropertyRequest, updatePropertyRequest } from '@/lib/api/property-api';
 import { Property, PropertyFormValues } from '@/types/property';
+import { useAuth } from '@/context/auth-context';
+import { canPublishRole, websitePropertyUrl } from '@/lib/website';
 
 export default function EditPropertyPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const params = useParams<{ id: string }>();
   const [property, setProperty] = useState<Property | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,6 +59,16 @@ export default function EditPropertyPage() {
     address: property.address,
     city: property.city,
     state: property.state,
+    isPublished: property.isPublished,
+    locality: property.locality || undefined,
+    listingType: property.listingType || 'SALE',
+    furnishing: property.furnishing || undefined,
+    floor: property.floor ?? undefined,
+    totalFloors: property.totalFloors ?? undefined,
+    reraId: property.reraId || undefined,
+    isFeatured: property.isFeatured ?? false,
+    amenities: property.amenities ?? [],
+    images: property.images ?? [],
   };
 
   return (
@@ -70,6 +83,8 @@ export default function EditPropertyPage() {
           defaultValues={defaultValues}
           onSubmit={handleSubmit}
           submitLabel="Save Changes"
+          canPublish={canPublishRole(user?.role)}
+          websiteUrl={property.isPublished ? websitePropertyUrl(property.slug) : undefined}
         />
       </div>
     </div>

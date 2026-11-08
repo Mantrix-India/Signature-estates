@@ -6,13 +6,21 @@ import Link from 'next/link';
 import { Plus, Scale } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Property, PropertyFilters } from '@/types/property';
-import { listPropertiesRequest, deletePropertyRequest } from '@/lib/api/property-api';
+import {
+  listPropertiesRequest,
+  deletePropertyRequest,
+  setPropertyPublishedRequest,
+} from '@/lib/api/property-api';
+import { useAuth } from '@/context/auth-context';
+import { canPublishRole } from '@/lib/website';
 import { PropertyCard } from '@/components/properties/property-card';
 import { PropertyFiltersBar } from '@/components/properties/property-filters';
 import { AiSearchBar } from '@/components/ai/ai-search-bar';
 
 export default function PropertiesPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const canPublish = canPublishRole(user?.role);
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<PropertyFilters>({ page: 1 });
@@ -44,6 +52,23 @@ export default function PropertiesPage() {
       fetchProperties();
     } catch {
       toast.error('Failed to delete property');
+    }
+  }
+
+  async function handleTogglePublish(property: Property) {
+    const next = !property.isPublished;
+    try {
+      const updated = await setPropertyPublishedRequest(property.id, next);
+      setProperties((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
+      toast.success(
+        next
+          ? property.status === 'AVAILABLE'
+            ? 'Published. It will appear on the website within 5 minutes.'
+            : 'Published, but it only shows on the website while status is AVAILABLE.'
+          : 'Removed from the website'
+      );
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to update website status');
     }
   }
 
@@ -124,7 +149,11 @@ export default function PropertiesPage() {
                   className="h-4 w-4 cursor-pointer accent-neutral-900 dark:accent-white"
                 />
               </label>
-              <PropertyCard property={property} onDelete={handleDelete} />
+              <PropertyCard
+                property={property}
+                onDelete={handleDelete}
+                onTogglePublish={canPublish ? handleTogglePublish : undefined}
+              />
             </div>
           ))}
         </div>

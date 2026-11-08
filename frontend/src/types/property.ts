@@ -1,5 +1,7 @@
 export type PropertyType = 'APARTMENT' | 'VILLA' | 'PLOT' | 'COMMERCIAL' | 'OTHER';
 export type PropertyStatus = 'AVAILABLE' | 'RESERVED' | 'BOOKED' | 'SOLD';
+export type ListingType = 'SALE' | 'RENT';
+export type Furnishing = 'UNFURNISHED' | 'SEMI_FURNISHED' | 'FURNISHED';
 
 export interface Property {
   id: string;
@@ -22,6 +24,17 @@ export interface Property {
   annualAppreciationPercent?: number | null;
   possessionDate?: string | null;
   rentalYieldPercent?: number | null;
+  // Public website (V2.3)
+  isPublished: boolean;
+  slug: string;
+  locality?: string | null;
+  listingType?: ListingType;
+  furnishing?: Furnishing | null;
+  floor?: number | null;
+  totalFloors?: number | null;
+  reraId?: string | null;
+  isFeatured?: boolean;
+  images?: string[];
   createdById: string;
   createdAt: string;
   updatedAt: string;
@@ -45,6 +58,7 @@ export interface PropertyFilters {
   minPrice?: number;
   maxPrice?: number;
   search?: string;
+  isPublished?: boolean;
 }
 
 export interface PropertyFormValues {
@@ -59,4 +73,15 @@ export interface PropertyFormValues {
   address: string;
   city: string;
   state: string;
+  // Public website (V2.3). isPublished is only sent by ADMIN/MANAGER.
+  isPublished?: boolean;
+  locality?: string;
+  listingType?: ListingType;
+  furnishing?: Furnishing;
+  floor?: number;
+  totalFloors?: number;
+  reraId?: string;
+  isFeatured?: boolean;
+  amenities?: string[];
+  images?: string[];
 }

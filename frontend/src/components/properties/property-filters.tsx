@@ -46,6 +46,22 @@ export function PropertyFiltersBar({
           </option>
         ))}
       </select>
+
+      <select
+        value={filters.isPublished === undefined ? '' : String(filters.isPublished)}
+        onChange={(e) =>
+          onChange({
+            ...filters,
+            isPublished: e.target.value === '' ? undefined : e.target.value === 'true',
+            page: 1,
+          })
+        }
+        className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-400 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white"
+      >
+        <option value="">Website: all</option>
+        <option value="true">On website</option>
+        <option value="false">Not published</option>
+      </select>
     </div>
   );
 }

@@ -3,58 +3,99 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
-  Real Estate OS — unified design system.
+  Signature Estates OS — unified design system (v2 "warm workspace").
 
-  The application is styled entirely with raw Tailwind `neutral-*` + `white`
-  utilities plus semantic status colors. Rather than rewriting every file, we
-  retune the neutral scale here into a premium, layered, slightly-cool charcoal
-  palette and introduce a restrained `brand` accent. Every surface in the app
-  inherits this instantly and cohesively.
+  The application is styled entirely with raw Tailwind `neutral-*` / `brand-*`
+  utilities plus semantic status colors. Rather than rewriting every page, the
+  scales are retuned here into a warm, paper-and-ink palette with a saffron
+  accent. Every existing surface in the app inherits the new look instantly.
+
+  Light mode  : warm cream canvas (50–200), ink text (700–950).
+  Dark mode   : deep slate-green canvas (900–950), soft text (200–400).
 */
 
 @theme {
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-dm-sans), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-playfair), Georgia, 'Times New Roman', serif;
+  --font-mono: var(--font-dm-mono), ui-monospace, SFMono-Regular, monospace;
 
-  /* Neutral scale — retuned toward a refined, faintly cool graphite.
-     Light-mode surfaces live in 50–300, text in 500–900.
-     Dark-mode surfaces live in 800–950, text in 300–white. */
-  --color-white: oklch(0.995 0.001 260);
-  --color-neutral-50: oklch(0.978 0.0025 260);
-  --color-neutral-100: oklch(0.957 0.004 260);
-  --color-neutral-200: oklch(0.918 0.005 260);
-  --color-neutral-300: oklch(0.862 0.006 260);
-  --color-neutral-400: oklch(0.706 0.009 262);
-  --color-neutral-500: oklch(0.557 0.011 262);
-  --color-neutral-600: oklch(0.452 0.013 264);
-  --color-neutral-700: oklch(0.366 0.014 264);
-  --color-neutral-800: oklch(0.278 0.014 264);
-  --color-neutral-900: oklch(0.205 0.014 265);
-  --color-neutral-950: oklch(0.152 0.014 265);
+  /* ---- Neutral ramp -------------------------------------------------
+     Light surfaces live in 50–300, light text in 600–950.
+     Dark surfaces live in 800–950, dark text in 200–400.
+     The warm hue at the light end and the cool slate-green at the dark
+     end are intentional — they are the two halves of the same ramp. */
+  --color-white: #fffdfa;
+  --color-neutral-50: #faf8f4;
+  --color-neutral-100: #f6f3ee;
+  --color-neutral-200: #ece7df;
+  --color-neutral-300: #ddd5c9;
+  --color-neutral-400: #a8a197;
+  --color-neutral-500: #7d8389;
+  --color-neutral-600: #53616b;
+  --color-neutral-700: #3b4953;
+  --color-neutral-800: #2d3a3d;
+  --color-neutral-900: #1b2529;
+  --color-neutral-950: #131a1d;
 
-  /* Brand accent — a calm, trustworthy indigo-blue. Used sparingly:
-     active navigation, primary emphasis, focus rings, key figures. */
-  --color-brand-50: oklch(0.97 0.014 262);
-  --color-brand-100: oklch(0.94 0.03 262);
-  --color-brand-200: oklch(0.89 0.06 262);
-  --color-brand-300: oklch(0.81 0.1 262);
-  --color-brand-400: oklch(0.72 0.14 262);
-  --color-brand-500: oklch(0.645 0.17 262);
-  --color-brand-600: oklch(0.575 0.19 264);
-  --color-brand-700: oklch(0.505 0.175 264);
-  --color-brand-800: oklch(0.435 0.14 265);
-  --color-brand-900: oklch(0.37 0.1 265);
+  /* ---- Brand accent — saffron -------------------------------------- */
+  --color-brand-50: #fdf3ed;
+  --color-brand-100: #fae2d4;
+  --color-brand-200: #f3c3a7;
+  --color-brand-300: #eaa177;
+  --color-brand-400: #e18b59;
+  --color-brand-500: #d97746;
+  --color-brand-600: #c26136;
+  --color-brand-700: #9c4d2b;
+  --color-brand-800: #763a21;
+  --color-brand-900: #552a18;
+
+  /* ---- Supporting accents (pipeline, charts, status) ---------------- */
+  --color-saffron-100: #fae2d4;
+  --color-saffron-500: #d97746;
+  --color-saffron-700: #9c4d2b;
+
+  --color-teal-100: #d2ecea;
+  --color-teal-500: #258b88;
+  --color-teal-700: #19625f;
+
+  --color-violet-100: #e2e0f4;
+  --color-violet-500: #7772bd;
+  --color-violet-700: #544f90;
+
+  --color-moss-100: #dcebe2;
+  --color-moss-500: #62977a;
+  --color-moss-700: #456a56;
+
+  /* ---- Semantic surfaces (flip in dark mode, see @layer base) ------- */
+  --color-background: #f6f3ee;
+  --color-foreground: #18222b;
+  --color-surface: #fffdfa;
+  --color-surface-muted: #f1ece4;
+  --color-hairline: #e8e2da;
+  --color-rail: #19272e;
 
   --radius-lg: 0.625rem;
   --radius-xl: 0.875rem;
   --radius-2xl: 1.125rem;
+
+  --shadow-soft: 0 16px 45px rgb(36 39 35 / 0.06);
+  --shadow-lift: 0 10px 30px -12px rgb(36 39 35 / 0.18);
 }
 
 @layer base {
-  * {
-    border-color: var(--color-neutral-200);
+  /* Dark mode re-points the semantic tokens. Everything built on
+     bg-background / bg-surface / border-hairline flips automatically. */
+  .dark {
+    --color-background: #131a1d;
+    --color-foreground: #edf1ed;
+    --color-surface: #1b2529;
+    --color-surface-muted: #202c30;
+    --color-hairline: #2d3a3d;
+    --color-rail: #16211f;
   }
-  .dark * {
-    border-color: var(--color-neutral-800);
+
+  * {
+    border-color: var(--color-hairline);
   }
 
   html {
@@ -62,6 +103,8 @@
   }
 
   body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -70,15 +113,17 @@
   }
 
   /* Tabular figures for dense CRM data */
-  h1, h2, h3, .tabular {
+  h1,
+  h2,
+  h3,
+  .tabular {
     font-feature-settings: 'tnum', 'cv02', 'cv03', 'cv04';
   }
 
   ::selection {
-    background: color-mix(in oklch, var(--color-brand-500) 28%, transparent);
+    background: color-mix(in oklch, var(--color-brand-500) 26%, transparent);
   }
 
-  /* Refined focus ring across all interactive elements */
   :focus-visible {
     outline: 2px solid color-mix(in oklch, var(--color-brand-500) 70%, transparent);
     outline-offset: 2px;
@@ -86,8 +131,24 @@
   }
 }
 
-/* Premium, unobtrusive scrollbars */
 @layer utilities {
+  /* Editorial display type for page titles and key figures */
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+  }
+
+  /* Small uppercase label used above section titles */
+  .eyebrow {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 10px;
+    line-height: 1.2;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-neutral-500);
+  }
+
+  /* Premium, unobtrusive scrollbars */
   * {
     scrollbar-width: thin;
     scrollbar-color: var(--color-neutral-300) transparent;
@@ -134,6 +195,11 @@
   }
   .animate-fade-up {
     animation: reos-fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* Hide the horizontal scrollbar on the kanban rail without losing scroll */
+  .scrollbar-slim::-webkit-scrollbar {
+    height: 6px;
   }
 }
 

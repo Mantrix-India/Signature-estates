@@ -24,6 +24,12 @@ export async function updatePropertyRequest(
   return data.data;
 }
 
+/** Publish / unpublish on the public website (ADMIN and MANAGER only). */
+export async function setPropertyPublishedRequest(id: string, isPublished: boolean): Promise<Property> {
+  const { data } = await api.patch(`/properties/${id}/publish`, { isPublished });
+  return data.data;
+}
+
 export async function deletePropertyRequest(id: string): Promise<void> {
   await api.delete(`/properties/${id}`);
 }
